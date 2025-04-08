@@ -2,6 +2,10 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
+      - name: Set repository name to lowercase
+        id: vars
+        run: echo "repo_name=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -13,12 +17,16 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ghcr.io/${{ github.repository | toLowerCase }}:${{ github.sha }}
+          tags: ghcr.io/${{ env.repo_name }}:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-22.04
     needs: build
     steps:
+      - name: Set repository name to lowercase
+        id: vars
+        run: echo "repo_name=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install Helm
@@ -31,14 +39,15 @@ jobs:
       - name: Deploy the Helm chart
         run: |
           helm upgrade \
-          ${{ github.event.repository.name | toLowerCase }} \
+          ${{ env.repo_name }} \
           helm \
           --install \
           --create-namespace \
-          --namespace ${{ github.event.repository.name | toLowerCase }} \
-          --set image=ghcr.io/${{ github.repository | toLowerCase }}:${{ github.sha }} \
+          --namespace ${{ env.repo_name }} \
+          --set image=ghcr.io/${{ env.repo_name }}:${{ github.sha }} \
           --set dockerConfigJson.data="\{\"auths\":\{\"ghcr.io\":\{\"username\":\"${{ github.actor }}\"\,\"password\":\"${{ secrets.REGISTRY_TOKEN }}\"\}\}\}"
 
 on:
   push:
-    if: github.ref_name == github.event.repository.default_branch
+    branches:
+      - main
