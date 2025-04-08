@@ -1,5 +1,4 @@
 jobs:
-
   build:
     runs-on: ubuntu-22.04
     steps:
@@ -9,11 +8,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Build and push the Docker image
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository | toLowerCase }}:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-22.04
@@ -31,12 +31,12 @@ jobs:
       - name: Deploy the Helm chart
         run: |
           helm upgrade \
-          ${{ github.event.repository.name }} \
+          ${{ github.event.repository.name | toLowerCase }} \
           helm \
           --install \
           --create-namespace \
-          --namespace ${{ github.event.repository.name }} \
-          --set image=ghcr.io/${{ github.repository }}:${{ github.sha }} \
+          --namespace ${{ github.event.repository.name | toLowerCase }} \
+          --set image=ghcr.io/${{ github.repository | toLowerCase }}:${{ github.sha }} \
           --set dockerConfigJson.data="\{\"auths\":\{\"ghcr.io\":\{\"username\":\"${{ github.actor }}\"\,\"password\":\"${{ secrets.REGISTRY_TOKEN }}\"\}\}\}"
 
 on:
